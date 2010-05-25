@@ -8,9 +8,9 @@ var s3dbCollections = []; var collectionsCalled = false;
 var s3dbVerbs = [];var s3dbVerbID = false; var predicatedCalled = false;
 $(document).ready(function(){
   get();
-  if(!GET['url']) { GET['url'] = "http://localhost/s3db"; }
+  if(!GET['url']) { GET['url'] = "http://ibl.mdanderson.org/s3dbdemo3/"; }
   if(!GET['key']) { GET['key'] = ""; }
-  if(!GET['project_id']) { GET['project_id'] = "167222"; }
+  if(!GET['project_id']) { GET['project_id'] = "1715"; }
      
   var q = S3QLtranslator("R|P"+GET['project_id']);
   var url2call = GET['url']+"/S3QL.php?key="+GET['key']+"&query="+q+"&format=json";
@@ -111,7 +111,12 @@ function newRuleTable() {
 	//get the collections, can't get them from the rules since some of the collections may not have them yet; as the collections come along, they will be filling the select with options, therefore i can add the select at this point
 	$('#collection_select').append('<img src="loading.gif">');
 	$('#object_select').append('<img src="loading.gif">');
-	$('#predicate_select').append('<img src="loading.gif">');
+	
+	//for predicate, tehre are other 3 options: New, from Bioontology, From another collection
+	$('#predicate_select').append($(document.createElement('option')).attr('value','new').html('<i>(New)</i>'))
+		.append($(document.createElement('option')).attr('value','ontology').html('<i>(Select from a Bio-Ontology!)</i>'))
+		.append($(document.createElement('option')).attr('value','other').html('<i>(Item_id from another collection)</i>'));
+	
 	search_collection(GET['project_id'], ['subject_select', 'object_select']);
 	//search_predicate(s3dbVerbID); this guy is being search right after retrtieving collection s3dbVerb
 	
