@@ -27,12 +27,14 @@ var S3QLtranslator = function (query) {
 	}
 	target = target[1];
 	
-	var template = targetAndParams.trim().match(target+'\\.[^|, ]+','g');
+	//var template = targetAndParams.trim().match(target+'\\.[^|, ]+','g');
+	var t = targetAndParams.trim().match('[^|]*|');
+	var template = t[0].split(',');
 	var search = '';
 	if(template){
 		for (var i=0; i<template.length; i++) {
-			if(template[i]!==''){
-				search += template[i].replace(target+'\.','');
+			if(template[i]!=='' && template[i].trim()!==target){
+				search += template[i].trim().replace(target+'\.','');
 				if(i!==template.length-1){
 					search += ',';
 				}
