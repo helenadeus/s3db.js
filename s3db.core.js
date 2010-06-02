@@ -1,4 +1,4 @@
-s3db = { 'core' :
+var s3db = { 'core' :
 			{
 				entities : {U:'user',P:'project',C:'collection',R:'rule',I:'item',S:'statement'},
 				ids : {U:'user_id',P:'project_id',C:'collection_id',R:'rule_id',I:'item_id',S:'statement_id'},
