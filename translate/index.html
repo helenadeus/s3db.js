@@ -64,7 +64,7 @@
 			
 			$(document.createElement('div')).attr('id','var').html("Input the short query string<sup style='color: red'>*</sup>:<BR> pattern: [select,insert,update,delete] ( [D,U,P,C,R,I or S] | [attribute = value] or [D,U,P,C,R,I or S]  ) <BR>")
 			.append($(document.createElement('input')).
-				attr('type', 'text').attr('id','query_input').attr('style', 'width:300px').attr('value','select(C|P7659)'))
+				attr('type', 'text').attr('id','query_input').attr('style', 'width:300px').attr('value','select(C.id, C.name, C.created_by |P7659)'))
 			.append('<BR>').appendTo(form);
 				
 			$(document.createElement('div')).attr('id','var').html("Input the query URL").
