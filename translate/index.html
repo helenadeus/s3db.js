@@ -1,0 +1,204 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+ <head>
+  <script type="text/javascript" src="jquery.js"></script>
+  <script type="text/javascript" src="jquery-ui.js"></script>
+  <script type="text/javascript" src="http://s3db.mathbiol-lena.googlecode.com/hg/get.js"></script>
+  <script type="text/javascript" src="s3ql_translator.js"></script>
+  <script type="text/javascript" src="../tablesorter.jquery.js"></script> 
+  <link rel="StyleSheet" href="../tablesorter.css" type="text/css">
+  
+  <script type="text/javascript">
+
+	window.onload = function () {
+		get();
+		
+		var q = unescape(window.location.search);
+		var q1 = q.match(/\?([^&]+)/);
+		if(typeof(GET.query) === 'undefined' && q1 && q1[0]!==''){
+			var query =q1[1];
+		}
+		else {
+			var query = GET.query;
+		}
+
+		if(query){
+			//if the url is present, redirect to the query unless the user specifically asked not to
+			var s3ql_query = S3QLtranslator(query);
+			
+			if(typeof(GET.url)!=='undefined'){
+				var prequery = GET.url+(GET.url.match(/\/$/)?'':'/')+'S3QL.php?';
+				if(typeof(GET.key)!=='undefined'){
+					prequery += '&key='+GET.key;
+				}
+				prequery += '&query=';
+				s3ql_query = prequery+s3ql_query;
+			
+			if(typeof(GET.exec)==='undefined' ){
+				var exec = 0;
+			}
+			else if(typeof(GET.url)==='undefined'){
+				var exec = 0;
+			}
+			else if(GET.exec){
+				var exec = GET.exec*1;
+			}
+			}
+			
+			if(!exec || typeof(GET.url)=='undefined') {//display
+				var span = document.createElement('span');
+				document.body.appendChild(span);
+				span.style.fontWeight = "bold";
+				span.innerHTML = "Your query {"+query+"} translates into XML S3QL format:<br>";
+				var txt = document.createElement('textarea');
+				document.body.appendChild(txt);
+				txt.cols = 100; 
+				txt.value = s3ql_query;
+			}
+			else {
+				window.location= s3ql_query;
+			}
+		}
+		else {
+			var form = $(document.createElement('div')).attr('id','var').html("<div style='cursor: move;background-color: #FFF4CE;font-style: italic; font-size: 24px'>S3QL translate</div>").appendTo('body').attr('style', 'border-style: ridge;width: 360px; background-color: #FFFDE1; border-color: #E9E9E9;font-family: Times New Roman;margin-left: auto ; margin-right: auto').draggable();
+			
+			$(document.createElement('div')).attr('id','var').html("Input the short query string<sup style='color: red'>*</sup>:<BR> pattern: [select,insert,update,delete] ( [D,U,P,C,R,I or S] | [attribute = value] or [D,U,P,C,R,I or S]  ) <BR>")
+			.append($(document.createElement('input')).
+				attr('type', 'text').attr('id','query_input').attr('style', 'width:300px').attr('value','select(C|P7659)'))
+			.append('<BR>').appendTo(form);
+				
+			$(document.createElement('div')).attr('id','var').html("Input the query URL").
+			append($(document.createElement('input')).attr('type', 'text').attr('id','url').attr('style', 'width:300px').attr('value', 'http://ibl.mdanderson.org/s3dbdemo3/'))
+			.appendTo(form);
+			
+			$(document.createElement('div')).attr('id','var').html("Input the query key:<BR>").append($(document.createElement('input')).attr('type', 'password').attr('id','key').attr('style', 'width:300px')).appendTo(form);
+			
+		
+		
+			$(document.createElement('input')).attr('type','button').attr('value','Execute the query').click(function () {
+				if($('#query_input').val()!==''){
+					//window.open($('#url').val()+'S3QL.php?&key='+$('#key').val()+'&query='+S3QLtranslator($('#query_input').val()));
+					//append a div for a sortable table that will take the values in the output
+					if($('#query_result').length===0){
+						var qR = $(document.createElement('div')).attr('id','query_result').append('<img src="http://js.s3db.googlecode.com/hg/loading.gif" id="loading_data"></img>').appendTo("body");
+
+						
+					}
+					else {
+						$('#query_result').html('');
+					}
+					var url = ($('#url').val().match('/$'))?$('#url').val():$('#url').val().match('/$')+'/';
+					var complete_query = url+'S3QL.php?&key='+$('#key').val()+'&query='+S3QLtranslator($('#query_input').val())
+					//console.log(complete_query);
+					$.getJSON(complete_query+'&format=json&callback=?',makeDataTable);
+
+
+				}
+				else {
+					alert('Query box cannot be empty :-(');
+				}
+			}).appendTo(form);
+			$(document.createElement('input')).attr('type','button').attr('value','Show the full length query').click(function () {
+				window.location.href = window.location.href+'?url='+$('#url').val()+'&key='+$('#key').val()+'&query='+$('#query_input').val()+'&exec=0'
+			}).appendTo(form);
+			//alert("Please provide a query in the URL using ? (for example ?select(S | R = x))");
+		}
+	}
+
+	function makeDataTable(data){
+		$('#loading_data').attr('style','display:none');
+		//make the table, append it to 
+		$(document.createElement('table')).attr('class','tablesorter').attr('id', 'table_data').appendTo("#query_result");
+		
+		var thead = $(document.createElement('thead'));
+		$('#table_data').append(thead);
+		var thtr = $(document.createElement('tr')).attr('id', 'table_rules_head').appendTo(thead);
+		var col_heads = [];
+		$.each(data[0], function (key,value) {
+			col_heads.push(key);
+		});
+		
+		for (var i=0; i<col_heads.length; i++) {
+			$(document.createElement('th')).attr('id', 'col_head_'+col_heads[i]).attr('scope','column').html(col_heads[i]).appendTo(thtr);
+		}
+
+		var tbody = $(document.createElement('tbody'));
+		$('#table_data').append(tbody);
+		
+		
+		for (var i=0; i<data.length; i++) {
+			var classColor = ((i%2)?'even':'odd');
+			var tr = $(document.createElement('tr')).attr('id', 'table_data_'+i).attr('class', classColor).appendTo(tbody);
+			
+			for (var j=0; j<col_heads.length; j++) {
+				if (col_heads[j]==='created_by' || col_heads[j]==='Creator') {
+					//if the data is not ready, don't put anything in html
+					var td = $(document.createElement('td')).attr('id','td_'+i+'_'+j).appendTo(tr).html(user(data[i][col_heads[j]], 'td_'+i+'_'+j, $('#url').val(), $('#key').val()));
+					
+				}
+				else {
+					var id = 'td_'+i+'_'+j;
+					var td = $(document.createElement('td')).attr('id',id).appendTo(tr);
+					if(data[i][col_heads[j]]) {
+						td.html(data[i][col_heads[j]]);
+					}
+				}
+			}
+		}
+		
+		
+		$('#table_data').tablesorter().draggable(); 
+		
+	}
+
+	var s3dbUsers = [];	var missingSlots = [];var missingSlotIDS = [];
+	function user(id, userslot, url, key) {
+		//finds the usernmae of an s3db user and saves it; the call trigger an event that fill out the user slot whenever it is available;
+		if(typeof(url)==='undefined') var url = GET['url'];
+		if(typeof(key)==='undefined') var key = GET['key'];
+		var user_id = id;
+	   if(typeof(s3dbUsers[id])==='undefined'){
+		   
+		   $('#'+userslot).append('<img id="loading_'+userslot+'" src="http://js.s3db.googlecode.com/hg/loading.gif">');
+		  
+		   
+		  //however, I need to make sure this query runs only once
+		  if(missingSlots.length==0){
+			   var q = S3QLtranslator('U');
+			   var url2call = url+"/S3QL.php?key="+key+"&query="+q+"&format=json";
+			   // s3dbcall(url,"result=ans;alert(':-)')","result=0;alert(':-(')");
+			   $.getJSON(url2call+'&callback=?', function (users) {
+					for (var i=0; i<users.length; i++) {
+						s3dbUsers[users[i].user_id] = users[i].username;
+						
+					}
+					//once all the data are in
+					for (var h=0; h<missingSlots.length; h++) {
+						$('#'+missingSlots[h]).html(s3dbUsers[missingSlotIDS[h]]+'<font size="1px"> (U'+missingSlotIDS[h]+')</font>');
+					}
+									
+					
+			   });
+		   }
+
+		   //because the query should run only once, although this code will run many times, use this to indicate that certain slots are waiting for their value
+		   missingSlots.push(userslot);
+		   missingSlotIDS.push(id);
+				
+		
+	   }
+	   else {
+			document.getElementById(userslot).innerHTML = s3dbUsers[user_id]+'<font size="1px"> (U'+user_id+')</font>';
+	   }
+
+	}
+
+	
+  </script>
+  
+ </head>
+
+ <body>
+   
+ </body>
+</html>
