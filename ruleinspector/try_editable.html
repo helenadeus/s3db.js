@@ -1,0 +1,47 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+ <HEAD>
+  <TITLE> New Document </TITLE>
+   <script type="text/javascript" src="../jquery.js"></script> 
+  <script type="text/javascript" src="../jquery.editable-1.3.3.js"></script> 
+ <script type="text/javascript">
+	function makeText() {
+		$('#edit_me').editable();
+		$('#edit_me').click();
+
+		var opts = {
+				'a':'Item 1', 'b':'Item 2', 'c':'Item 3'
+				}
+		$('#edit_select').editable(
+			{
+				type : 'select',
+				options:opts,
+                submitBy:  ''
+			}
+		);
+		$('#edit_select').click();
+		//now make one that becomes a select box
+		
+	}
+	function readInput(){
+	 var opts = $('#edit_select').children().children();
+		for (var i=0; i<opts.length; i++) {
+			if(opts[i].selected){
+				console.log('value is '+opts[1].value)
+			}
+		}
+	}
+	
+
+ </script>
+ 
+ 
+ </HEAD>
+
+ <BODY>
+  <div id='edit_me'>OLA!</div>
+  <span id='edit_select' class='editable'>Select</span>
+<INPUT TYPE="submit" onClick='makeText();'>
+<INPUT TYPE="submit" onClick='readInput();' value='seeopts'>
+ </BODY>
+</HTML>
