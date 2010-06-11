@@ -9,9 +9,16 @@ $(document).ready(function(){
   get();
   if(!GET['url']) { GET['url'] = "http://ibl.mdanderson.org/s3dbdemo3/"; }
   if(!GET['key']) { GET['key'] = ""; }
-  if(!GET['project_id']) { GET['project_id'] = "1715"; }
+  if(!GET['project_id']) { GET['project_id'] = "1715"; 
+						GET['collection_id'] = "1726"; 
+  }
+  //if(!GET['collection_id']) { }
      
-  var q = S3QLtranslator("R|P"+GET['project_id']);
+  var qstr = "R|P"+GET['project_id'];
+  if(typeof(GET['collection_id'])!=='undefined' && GET['collection_id']!=='')
+	{	qstr += ',subject_id='+GET['collection_id']; }
+
+  var q = S3QLtranslator(qstr);
   var url2call = GET['url']+"/S3QL.php?key="+GET['key']+"&query="+q+"&format=json";
   
   $.getJSON(url2call+'&callback=?', ruleInpector);
@@ -20,7 +27,10 @@ $(document).ready(function(){
 
 function ruleInpector(rules) {
 	
-	s3dbRules = rules;
+	for (var i=0; i<rules.length; i++) {
+		s3dbRules[rules[i].rule_id] = rules[i];
+	}
+	//s3dbRules = rules;
 	//This should be placed on top
 	
 	$(document.createElement('div')).attr('align', 'center').attr('style', 'background-color: #99CCFF; ').html('Rule Inspector').appendTo("body");
@@ -45,7 +55,7 @@ function ruleInpector(rules) {
 		var coldata = {'rule_id':rules[i].rule_id, 'subject':rules[i].subject+' <FONT SIZE="1px">(C'+rules[i].subject_id+')</FONT>', 'predicate':rules[i].verb+' <font size="1px">(I'+rules[i].verb_id+')</FONT>', 'object':rules[i].object+((rules[i].object_id!='')?' <FONT SIZE="1px">(C'+rules[i].object_id+')</FONT>':''), 'created_on':rules[i].created_on.substring(0, 10), 
 		'validation':rules[i].validation,
 		'notes':rules[i].notes,
-		'action':((rules[i].change)?'<a href="javascript:s3db_delete('+rules[i].rule_id+', "R")">Edit</a>&nbsp;&nbsp;&nbsp;<a href="javascript:s3db_delete('+rules[i].rule_id+', "R")">Delete</a>':'')
+		'action':((rules[i].change)?'<a href="javascript:s3db_edit('+rules[i].rule_id+', \'R\')">Edit</a>&nbsp;&nbsp;&nbsp;<a href="javascript:s3db_delete('+rules[i].rule_id+', \'R\')">Delete</a>':'')
 			
 		};
 		
@@ -80,7 +90,10 @@ function ruleInpector(rules) {
 
 function newRuleTable() {
 	
-	$(document.createElement('div')).attr('align', 'center').attr('style', 'background-color: #99CCFF; ').html('Create New Rule').appendTo("body");
+	
+	
+	$(document.createElement('div')).attr('align', 'center').attr('style', 'background-color: #99CCFF; ').html('Create New Rule').appendTo("body")
+		.append($(document.createElement('div')).attr('id','error_create').attr('style','color: red'));
 	$(document.createElement('table')).attr('class', 'new').attr('id', 'table_new_rules').appendTo("body");
 	var thead = $(document.createElement('thead'));
 	$('#table_new_rules').append(thead);
@@ -89,7 +102,7 @@ function newRuleTable() {
 	var tbody = $(document.createElement('tbody')).appendTo($('#table_new_rules'));
 	var inputTr = $(document.createElement('tr')).appendTo(tbody);
 	var extraTr = $(document.createElement('tr')).appendTo(tbody);
-	var col_heads = ['rule_id', 'subject', 'predicate','object', 'validation','notes','created_on', 'created_by','action'];
+	var col_heads = ['rule_id', 'subject', 'predicate','object', 'validation','notes','action'];
 	
 	// now create the input fields for adding stuff
 	var input = { 
@@ -99,9 +112,7 @@ function newRuleTable() {
 				'object' : $(document.createElement('select')).attr('id', 'object_select').change ( objectSelected ),
 				'validation':$(document.createElement('input')).attr('id', 'validation').attr('type','text').attr('value','UID').attr("disabled", true),
 				'notes':$(document.createElement('input')).attr('id', 'notes').attr('type','text'),
-				'created_on' : '',
-				'created_by' : '',
-				'action' : $(document.createElement('input')).attr('id', 'create_rule').attr('type','button').attr('value','Create')
+				'action' : $(document.createElement('input')).attr('id', 'create_rule').attr('type','button').attr('value','Create').click(function () { createRule();})
 				};
 
 	for (var i=0; i<col_heads.length; i++) {
@@ -110,7 +121,59 @@ function newRuleTable() {
 		$(document.createElement('td')).attr('id', col_heads[i]+'_input').append(input[col_heads[i]]).appendTo(inputTr);
 		$(document.createElement('td')).attr('id', col_heads[i]+'_extra').appendTo(extraTr);
 	}
+	//append a few extra breaks after the table to avoid hiding the select at the end of the page
+	$('body').append('<BR><BR><BR><BR>');
 	
+	//get the collections, can't get them from the rules since some of the collections may not have them yet; as the collections come along, they will be filling the select with options, therefore i can add the select at this point
+	$('#collection_select').append('<img src="loading.gif">');
+	$('#object_select').append('<img src="loading.gif">');
+	
+	//for predicate, tehre are other 3 options: New, from Bioontology, From another collection
+	$('#predicate_select').append('<img src="loading.gif">');
+	
+	search_collection(GET['project_id'], ['subject_select', 'object_select']);
+	//search_predicate(s3dbVerbID); this guy is being search right after retrtieving collection s3dbVerb
+	
+	
+	
+
+	
+	
+}
+
+function editRuleTable(ruleinfo) {
+		
+	$(document.createElement('div')).attr('align', 'center').attr('style', 'background-color: #99CCFF; ').html('Update Rule').appendTo("body")
+		.append($(document.createElement('div')).attr('id','error_edit').attr('style','color: red'));
+	$(document.createElement('table')).attr('class', 'new').attr('id', 'table_edit_rules').appendTo("body");
+	var thead = $(document.createElement('thead'));
+	$('#table_edit_rules').append(thead);
+	var thtr = $(document.createElement('tr')).appendTo(thead);
+	
+	var tbody = $(document.createElement('tbody')).appendTo($('#table_edit_rules'));
+	var inputTr = $(document.createElement('tr')).appendTo(tbody);
+	var extraTr = $(document.createElement('tr')).appendTo(tbody);
+	var col_heads = ['rule_id', 'subject', 'predicate','object', 'validation','notes','action'];
+	
+	// now create the input fields for adding stuff
+	var input = { 
+				'rule_id' : '',
+				'subject' : $(document.createElement('select')).attr('id', 'subject_select'),
+				'predicate' : $(document.createElement('select')).attr('id', 'predicate_select').change( predicateSelected ),
+				'object' : $(document.createElement('select')).attr('id', 'object_select').change ( objectSelected ),
+				'validation':$(document.createElement('input')).attr('id', 'validation').attr('type','text').attr('value','UID').attr("disabled", true),
+				'notes':$(document.createElement('input')).attr('id', 'notes').attr('type','text'),
+				'action' : $(document.createElement('input')).attr('id', 'create_rule').attr('type','button').attr('value','Create').click(function () { createRule();})
+				};
+
+	for (var i=0; i<col_heads.length; i++) {
+		var required = (col_heads[i].match(/subject|predicate|object/))?'<sup>*</sup>':'';
+		$(document.createElement('th')).attr('id', 'col_head_'+col_heads[i]).html(col_heads[i]+required).appendTo(thtr);
+		$(document.createElement('td')).attr('id', col_heads[i]+'_input').append(input[col_heads[i]]).appendTo(inputTr);
+		$(document.createElement('td')).attr('id', col_heads[i]+'_extra').appendTo(extraTr);
+	}
+	//append a few extra breaks after the table to avoid hiding the select at the end of the page
+	$('body').append('<BR><BR><BR><BR>');
 	
 	//get the collections, can't get them from the rules since some of the collections may not have them yet; as the collections come along, they will be filling the select with options, therefore i can add the select at this point
 	$('#collection_select').append('<img src="loading.gif">');
@@ -254,11 +317,14 @@ function user(id, userslot) {
 }
 
 function s3db_edit(id, E) {
-	console.log('edit '+rule_id);
+	//show the edit rules table so that user can still create new rule
+	//editRuleTable(s3dbRules[id]);
+	alert('Edit and Delete do not work yet.... :(');
 }
 
 function s3db_delete(id, E) {
-	console.log('delete '+rule_id);
+	//console.log('delete '+rule_id);
+	alert('Edit and Delete do not work yet.... :(');
 }
 
 function  predicateSelected() {
@@ -302,7 +368,7 @@ function  predicateSelected() {
 		//document.getElementById('predicate_input').innerHTML = '<input type="text" name="verb" id="verb" class="bp_form_complete-all-name">Type 3 or more letters<input type="button" name="edit_item_verb" value="Choose from Items" onClick="window.location=window.location.href.replace(\'literal_verb=1\',\'\').replace(\'item_verb=0\',\'\')">';
 		if($('#verb').length==0){
 		$('#predicate_select').hide();
-		$('#predicate_input').append($(document.createElement('input')).attr('type', 'text').attr('id', 'verb').attr('class', 'bp_form_complete'))
+		$('#predicate_input').append($(document.createElement('input')).attr('type', 'text').attr('id', 'verb').attr('name', 'verb').attr('class', 'bp_form_complete'))
 		$('#predicate_extra').append('<div>Type 3 or more letters</div>')
 							.append($(document.createElement('input')).attr('type', 'button').attr('value', 'Choose from Items').click ( function () {
 								$('#predicate_select').show();  $('#verb').hide();
@@ -391,4 +457,130 @@ function include(src, path) {
 	}
 
 
+}
+
+function createRule() {
+	//what is the subject?
+	var s = $('#subject_select').val();
+	//predicate can be any of predicate_id, literal verb or something from an ontology
+	var pred= $('#predicate_select').val();
+	
+	if(pred==='ontology'){
+		//there sould be something named verb_bioportal_concept_id	
+		var p = $('#verb').val(); 
+		var pred_type = 'literal';
+		var bioportal_concept = $('[name=verb_bioportal_concept_id]').val();//TO DO
+
+	}
+	else if(pred=='new') {
+		var p = $('#verb').val();
+		var pred_type = 'literal';
+	}
+	else {
+		var p = pred;
+		var pred_type = 'uri';
+	}
+
+	var obj = $('#object_select').val();
+	if(obj=='new'){
+		var o = $('#object').val();
+		var obj_type = 'literal';
+	}
+	else {
+		var o = $('#object_select').val();
+		var obj_type = 'uri';
+	}
+	if(typeof(s)==='') {
+		alert('subject missing');}
+	if(typeof(p)==='') {
+		alert('predicate missing');
+	}
+	if(typeof(o)==='') {alert('object missing');
+	}
+	
+	
+	q = 'insert(R|P'+GET['project_id']+',subject_id='+s;
+	
+	if(pred_type==='literal'){
+		q += ',verb='+p;
+	}
+	else {
+		q += ',verb_id='+p;
+	}
+
+	if(obj_type==='literal'){
+		q += ',object='+o;
+	}
+	else {
+		q += ',object_id='+o;
+	}
+	
+	if($('#notes').val()!==''){
+		q +=',notes='+$('#notes').val();
+	}
+	if($('#validation').val()!=='' && $('#validation').val()!=='UID'){
+		q +=',validation='+$('#validation').val();
+	}
+	q += ')';
+	
+	var insertQ = GET['url']+"/S3QL.php?key="+GET['key']+"&query="+S3QLtranslator(q)+"&format=json";
+	$.getJSON(insertQ+'&format=json&callback=?', function (msg) {
+		//append this rule info to rule table
+		if(typeof(msg[0].rule_id)!=='undefined'){
+			$('#error_create').html();
+			var rule_id = msg[0].rule_id;
+			//quick info retrieval
+			var ruleQ = GET['url']+"/URI.php?key="+GET['key']+"&uid=R"+rule_id+"&format=json&callback=?";
+			$.getJSON(ruleQ, appendNewRule);
+		}
+		else {
+			$('#error_create').html(msg[0].message);
+		}
+	})
+}
+
+function appendNewRule(info) {
+		var info = info[0];
+		var coldata = {
+			'rule_id':info.rule_id, 
+			'subject':info.subject+' <FONT SIZE="1px">(C'+info.subject_id+')</FONT>', 
+			'predicate':info.verb+' <font size="1px">(I'+info.verb_id+')</FONT>', 
+			'object':info.object+((typeof(info.object_id)!=='undefined' && info.object_id!='')?' <FONT SIZE="1px">(C'+info.object_id+')</FONT>':''),
+			'validation':info.validation,
+			'notes':info.notes,
+			'created_on':info.created_on.substring(0, 10), 
+			'created_by':info.created_by,
+			'action':((info.change)?'<a href="javascript:s3db_delete('+info.rule_id+', "R")">Edit</a>&nbsp;&nbsp;&nbsp;<a href="javascript:s3db_delete('+info.rule_id+', "R")">Delete</a>':'')
+			
+		};
+		
+		var tbtr = $(document.createElement('tr')).attr('id', 'table_rules_'+info.rule_id).attr('class', 'new').appendTo($('#table_rules'));
+		var cols=[];var data = [];
+		$.each(coldata, function (key, val) {
+			cols.push(key);
+			data.push(val);
+		});
+
+		for (var i=0; i<cols.length; i++) {
+						
+			if (cols[i]==='created_by') {
+				//if the data is not ready, don't put anything in html
+				$(document.createElement('td')).attr('id','td_'+cols[i]+'_'+info.rule_id).appendTo(tbtr);
+				
+				$('#td_'+i+'_'+info.rule_id).html(user(info.created_by, 'td_'+cols[i]+'_'+info.rule_id));
+				
+			}
+			else {
+				var id = 'td_'+cols[i]+'_'+info.rule_id;
+				$(document.createElement('td')).attr('id',id).appendTo(tbtr);
+				if(coldata[cols[i]]) {
+					$('#'+id).html(coldata[cols[i]]);
+				}
+				else {
+					$('#'+id).html('');
+				}
+			}
+		}
+		
+		
 }
