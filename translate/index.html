@@ -3,7 +3,8 @@
  <head>
   <script type="text/javascript" src="jquery.js"></script>
   <script type="text/javascript" src="jquery-ui.js"></script>
-  <script type="text/javascript" src="http://s3db.mathbiol-lena.googlecode.com/hg/get.js"></script>
+  <script type="text/javascript" src="get.js"></script>
+  <script type="text/javascript" src="uid_resolve.js"></script>
   <script type="text/javascript" src="s3ql_translator.js"></script>
   <script type="text/javascript" src="../tablesorter.jquery.js"></script> 
   <link rel="StyleSheet" href="../tablesorter.css" type="text/css">
@@ -15,8 +16,15 @@
 		
 		var q = unescape(window.location.search);
 		var q1 = q.match(/\?([^&]+)/);
-		if(typeof(GET.query) === 'undefined' && q1 && q1[0]!==''){
-			var query =q1[1];
+		if(typeof(GET.query) === 'undefined'){
+			if (typeof(GET.q) !== 'undefined') {
+				var query = GET.q;
+			}
+			else if(q1 && q1[0]!==''){
+				var query =q1[1];
+			}
+			
+			
 		}
 		else {
 			var query = GET.query;

@@ -65,9 +65,10 @@ var S3QLtranslator = function (query) {
 				
 			 }
 			 else if (pi.match(/(D|P|C|R|I|S)(.*)/)) {
-					var id = pi.match(/(D|P|C|R|I|S)(.*)/);
-					attr = entityNames[id[1]]+"_id";
-					value = id[2];
+					var uid_info = uid_resolve(pi);
+					//var id = pi.match(/(D|P|C|R|I|S)(.*)/);
+					attr = entityNames[uid_info['letter']]+"_id";
+					value = uid_info['origin'];
 					
 			}
 			s3ql_params += "<"+attr+">"+value+"</"+attr+">";
@@ -94,3 +95,4 @@ var S3QLtranslator = function (query) {
 String.prototype.trim = function () {
     return this.replace(/^\s*/, "").replace(/\s*$/, "");
 }
+
