@@ -1,116 +1,31 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
  <head>
-  <script type="text/javascript" src="jquery.js"></script>
-  <script type="text/javascript" src="jquery-ui.js"></script>
+  <script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.js"></script>
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8.5/jquery-ui.js"></script>
+  <script type="text/javascript" src="s3db.core.js"></script>
+  <script type="text/javascript" src="include.jquery.js"></script>
   <script type="text/javascript" src="get.js"></script>
   <script type="text/javascript" src="uid_resolve.js"></script>
   <script type="text/javascript" src="s3ql_translator.js"></script>
-  <script type="text/javascript" src="../tablesorter.jquery.js"></script> 
+   <script type="text/javascript" src="../tablesorter.jquery.js"></script> 
   <link rel="StyleSheet" href="../tablesorter.css" type="text/css">
   
   <script type="text/javascript">
-
+	var query_core = {};//make it global
 	window.onload = function () {
 		get();
+		//include core if not s3db
 		
-		var q = unescape(window.location.search);
-		var q1 = q.match(/\?([^&]+)/);
-		if(typeof(GET.query) === 'undefined'){
-			if (typeof(GET.q) !== 'undefined') {
-				var query = GET.q;
-			}
-			else if(q1 && q1[0]!==''){
-				var query =q1[1];
-			}
-			
-			
+		if(typeof(GET.core)!=='undefined' && GET.core!=='s3db.js'){
+			//document.write('<script type="text/javascript" src="'
+			//#	+ GET.core + '"></scr' + 'ipt>'); 
+			$.include(GET.core);
 		}
 		else {
-			var query = GET.query;
+			$.include('s3db.js');
 		}
-
-		if(query){
-			//if the url is present, redirect to the query unless the user specifically asked not to
-			var s3ql_query = S3QLtranslator(query);
-			
-			if(typeof(GET.url)!=='undefined'){
-				var prequery = GET.url+(GET.url.match(/\/$/)?'':'/')+'S3QL.php?';
-				if(typeof(GET.key)!=='undefined'){
-					prequery += '&key='+GET.key;
-				}
-				prequery += '&query=';
-				s3ql_query = prequery+s3ql_query;
-			
-			if(typeof(GET.exec)==='undefined' ){
-				var exec = 0;
-			}
-			else if(typeof(GET.url)==='undefined'){
-				var exec = 0;
-			}
-			else if(GET.exec){
-				var exec = GET.exec*1;
-			}
-			}
-			
-			if(!exec || typeof(GET.url)=='undefined') {//display
-				var span = document.createElement('span');
-				document.body.appendChild(span);
-				span.style.fontWeight = "bold";
-				span.innerHTML = "Your query {"+query+"} translates into XML S3QL format:<br>";
-				var txt = document.createElement('textarea');
-				document.body.appendChild(txt);
-				txt.cols = 100; 
-				txt.value = s3ql_query;
-			}
-			else {
-				window.location= s3ql_query;
-			}
-		}
-		else {
-			var form = $(document.createElement('div')).attr('id','var').html("<div style='cursor: move;background-color: #FFF4CE;font-style: italic; font-size: 24px'>S3QL translate</div>").appendTo('body').attr('style', 'border-style: ridge;width: 360px; background-color: #FFFDE1; border-color: #E9E9E9;font-family: Times New Roman;margin-left: auto ; margin-right: auto').draggable();
-			
-			$(document.createElement('div')).attr('id','var').html("Input the short query string<sup style='color: red'>*</sup>:<BR> pattern: [select,insert,update,delete] ( [D,U,P,C,R,I or S] | [attribute = value] or [D,U,P,C,R,I or S]  ) <BR>")
-			.append($(document.createElement('input')).
-				attr('type', 'text').attr('id','query_input').attr('style', 'width:300px').attr('value','select(C.id, C.name, C.created_by |P7659)'))
-			.append('<BR>').appendTo(form);
-				
-			$(document.createElement('div')).attr('id','var').html("Input the query URL").
-			append($(document.createElement('input')).attr('type', 'text').attr('id','url').attr('style', 'width:300px').attr('value', 'http://ibl.mdanderson.org/s3dbdemo3/'))
-			.appendTo(form);
-			
-			$(document.createElement('div')).attr('id','var').html("Input the query key:<BR>").append($(document.createElement('input')).attr('type', 'password').attr('id','key').attr('style', 'width:300px')).appendTo(form);
-			
 		
-		
-			$(document.createElement('input')).attr('type','button').attr('value','Execute the query').click(function () {
-				if($('#query_input').val()!==''){
-					//window.open($('#url').val()+'S3QL.php?&key='+$('#key').val()+'&query='+S3QLtranslator($('#query_input').val()));
-					//append a div for a sortable table that will take the values in the output
-					if($('#query_result').length===0){
-						var qR = $(document.createElement('div')).attr('id','query_result').append('<img src="http://js.s3db.googlecode.com/hg/loading.gif" id="loading_data"></img>').appendTo("body");
-
-						
-					}
-					else {
-						$('#query_result').html('');
-					}
-					var url = ($('#url').val().match('/$'))?$('#url').val():$('#url').val().match('/$')+'/';
-					var complete_query = url+'S3QL.php?&key='+$('#key').val()+'&query='+S3QLtranslator($('#query_input').val())
-					//console.log(complete_query);
-					$.getJSON(complete_query+'&format=json&callback=?',makeDataTable);
-
-
-				}
-				else {
-					alert('Query box cannot be empty :-(');
-				}
-			}).appendTo(form);
-			$(document.createElement('input')).attr('type','button').attr('value','Show the full length query').click(function () {
-				window.location.href = window.location.href+'?url='+$('#url').val()+'&key='+$('#key').val()+'&query='+$('#query_input').val()+'&exec=0'
-			}).appendTo(form);
-			//alert("Please provide a query in the URL using ? (for example ?select(S | R = x))");
-		}
 	}
 
 	function makeDataTable(data){
@@ -180,6 +95,9 @@
 						s3dbUsers[users[i].user_id] = users[i].username;
 						
 					}
+					if(typeof(s3dbUsers[1])=='undefined'){
+						s3dbUsers[1] = 'Admin';
+					}
 					//once all the data are in
 					for (var h=0; h<missingSlots.length; h++) {
 						$('#'+missingSlots[h]).html(s3dbUsers[missingSlotIDS[h]]+'<font size="1px"> (U'+missingSlotIDS[h]+')</font>');
@@ -201,6 +119,154 @@
 
 	}
 
+function querycore(core) {
+	query_core  = core;
+	if(typeof(GET.query) === 'undefined'){
+			var q = unescape(window.location.search);
+			var q1 = q.match(/\?([^&]+)/);
+			if (typeof(GET.q) !== 'undefined') {
+				var query = GET.q;
+			}
+			else if(q1 && q1[0]!==''){
+				var query =q1[1];
+			}
+			
+			
+		}
+		else {
+			var query = GET.query;
+		}
+	
+	//if the url is present, redirect to the query unless the user specifically asked not to
+	if(query){
+			var s3ql_query = S3QLtranslator(query, core);
+		
+			if(typeof(GET.url)!=='undefined'){
+				var prequery = GET.url+(GET.url.match(/\/$/)?'':'/')+'S3QL.php?';
+				if(typeof(GET.key)!=='undefined'){
+					prequery += '&key='+GET.key;
+				}
+				prequery += '&query=';
+				s3ql_query = prequery+s3ql_query;
+
+				if(typeof(GET.exec)==='undefined' ){
+					var exec = 0;
+				}
+				else if(typeof(GET.url)==='undefined'){
+					var exec = 0;
+				}
+				else if(GET.exec){
+					var exec = GET.exec*1;
+				}
+			}
+		
+		if(!exec || typeof(GET.url)=='undefined') {//display
+			var span = document.createElement('span');
+			document.body.appendChild(span);
+			span.style.fontWeight = "bold";
+			span.innerHTML = "Your query {"+query+"} translates into XML S3QL format:<br>";
+			var txt = document.createElement('textarea');
+			document.body.appendChild(txt);
+			txt.cols = 100; 
+			txt.value = s3ql_query;
+			
+		}
+		else {
+			window.location= s3ql_query;
+			return s3ql_query;
+		}	
+	}
+	else {
+		var form = $(document.createElement('div')).attr('id','var').html("<div style='cursor: move;background-color: #FFF4CE;font-style: italic; font-size: 24px'>S3QL translate</div>").appendTo('body').attr('style', 'border-style: ridge;width: 360px; background-color: #FFFDE1; border-color: #E9E9E9;font-family: Times New Roman;margin-left: auto ; margin-right: auto').draggable();
+		
+		$(document.createElement('div')).attr('id','var').html("Input the short query string<sup style='color: red'>*</sup>:<BR> pattern: [select,insert,update,delete] ( [D,U,P,C,R,I or S] | [attribute = value] or [D,U,P,C,R,I or S]  ) <BR>")
+		.append($(document.createElement('input')).
+			attr('type', 'text').attr('id','query_input').attr('style', 'width:300px').attr('value','select(C.id, C.label, C.created_by |P1196457)'))
+		.append('<BR>').appendTo(form);
+			
+		$(document.createElement('div')).attr('id','var').html("Input the query URL").
+		append($(document.createElement('input')).attr('type', 'text').attr('id','url').attr('style', 'width:300px').attr('value', 'http://204.232.200.16/s3dbdemo/'))
+		.appendTo(form);
+		
+		$(document.createElement('div')).attr('id','var').html("Input the query key:<BR>").append($(document.createElement('input')).attr('type', 'password').attr('id','key').attr('value', '1B1YXjp77JCKwWd').attr('style', 'width:300px')).appendTo(form);
+
+		$(document.createElement('span')).html('Use S3DB core').appendTo(form);
+		$(document.createElement('input')).attr('type','radio').attr('id','core').attr('name','core').attr('value', 's3db.js').attr('checked','true').click(
+		function () {	
+			$('#txtcore').hide();
+			$('#execute').attr('disabled', false);
+		}		
+		).appendTo(form);
+		$(document.createElement('span')).html('Use SKOS core').appendTo(form);
+		$(document.createElement('input')).attr('type','radio').attr('id','core').attr('name','core').attr('value', 'skos.js').click(
+		function () {	
+			$('#txtcore').hide();
+			$('#execute').attr('disabled', true);
+		}		
+		).appendTo(form);
+		
+		$(document.createElement('span')).html('Other').attr('id','othercore').appendTo(form).append(
+			$(document.createElement('input')).attr('type','radio').attr('name','core').attr('value','other').attr('id', 'core').click(
+			function () {	
+				$('#txtcore').show();
+				$('#execute').attr('disabled', true);
+			}
+			
+			));
+
+		$(document.createElement('div')).append($(document.createElement('input')).attr('type','text').attr('id','txtcore').attr('size','45').hide().attr('value', 'Paste here the url of your core')).click(
+						function () {
+							
+							if($('#txtcore').val()=='Paste here the url of your core'){
+								$('#txtcore').attr('value', '');
+							}
+						}
+					
+					).appendTo($('#othercore'));
+		
+		$(document.createElement('input')).attr('id','execute').attr('type','button').attr('value','Execute the query').click(function () {
+		if($('#query_input').val()!==''){
+			//window.open($('#url').val()+'S3QL.php?&key='+$('#key').val()+'&query='+S3QLtranslator($('#query_input').val()));
+			//append a div for a sortable table that will take the values in the output
+			if($('#query_result').length===0){
+				var qR = $(document.createElement('div')).attr('id','query_result').append('<img src="http://js.s3db.googlecode.com/hg/loading.gif" id="loading_data"></img>').appendTo("body");
+
+				
+			}
+			else {
+				$('#query_result').html('');
+			}
+			var url = ($('#url').val().match('/$'))?$('#url').val():$('#url').val().match('/$')+'/';
+			var complete_query = url+'S3QL.php?&key='+$('#key').val()+'&query='+S3QLtranslator($('#query_input').val(), core)
+			//console.log(complete_query);
+			$.getJSON(complete_query+'&format=json&callback=?',makeDataTable);
+
+
+		}
+		else {
+			alert('Query box cannot be empty :-(');
+		}
+	}).appendTo(form);
+
+
+	$(document.createElement('input')).attr('type','button').attr('value','Show the full length query').click(function () {
+		var core = $('input[name="core"]:checked').val();
+		if(core=='other'){
+			core = $('#txtcore').val();
+			if(core=='Paste here the url of your core'){
+				alert('Please provide a URL for your core or select "S3DB" as the core');	
+			}
+			
+		}
+		
+		window.location.href = window.location.href+'?url='+$('#url').val()+'&key='+$('#key').val()+'&query='+$('#query_input').val()+'&exec=0&core='+core;
+	}).appendTo(form);
+
+	
+		//
+	}
+}
+		
 	
   </script>
   

@@ -1,4 +1,4 @@
-var s3db = {
+querycore({
 	name : 's3db',
 	entities : ["deployment", "user", "project", "collection", "rule","item","statement"],
 	entity_ids : {D:'deployment_id',U:'user_id',P:'project_id',C:'collection_id',R:'rule_id',I:'item_id',S:'statement_id'},
@@ -33,4 +33,7 @@ var s3db = {
 		statement : ["item_id", "rule_id", "value"]
 	
 	}
-};
+	
+
+
+})
