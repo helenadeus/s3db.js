@@ -1,0 +1,52 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+ <HEAD>
+  <TITLE> New Document </TITLE>
+ <script type="text/javascript" src="../jquery.js"></script>
+ <script type="text/javascript" src="quickTranslate.js"></script>
+ <script type="text/javascript">
+
+function instantTranslate() {
+	var input = $('#input').val();
+	var q = quickTranslator.update('s3ql',input);
+	if(input=='')
+		{
+			$('#s3ql').html('empty?');
+			$('#sparql').html('empty?');
+		}
+	
+	
+}
+ </script>
+ 
+ </HEAD>
+
+ <BODY style="background-color: black">
+  <table border=0>
+  <tr>
+	<td><textarea id="input" style="background-color: black; color: white; size: 30;-moz-border-radius: 15px;border-radius: 15px" name="" rows="5" cols="30" onKeyUp="instantTranslate()"></textarea></td>
+	<td><textarea id="s3ql" style="background-color: black; color: white; size: 30;-moz-border-radius: 15px;border-radius: 15px" name="" rows="5" cols="50" ></textarea></td>
+	<td><textarea id="sparql" style="background-color: black; color: white; size: 30;-moz-border-radius: 15px;border-radius: 15px" name="" rows="5" cols="50" disabled></textarea></td>
+  </tr>
+  <tr>
+	
+	<td id="instructions" height="100">
+	
+	<img src="hp.png" style="margin-left: 80" width="120" height="120" border="1">
+	<div style="height:70;width: 220;color: #FF6A22; font-weight: bold; font-family:Comic Sans MS;font-size:16; text-align: center;text-shadow: #000000 1px 1px 1px;background-color: #66CCFF;-moz-border-radius: 15px;border-radius: 15px">Try typing something like select, insert, select(S), select(S|R123,value=test)</div>
+	</td>
+	<td></td>
+	<td></td>
+  </tr>
+  <tr>
+	<td></td>
+	<td></td>
+	<td></td>
+  </tr>
+  </table>
+  
+  
+  
+ 
+ </BODY>
+</HTML>
