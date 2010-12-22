@@ -14,7 +14,10 @@ function instantTranslate() {
 			$('#s3ql').html('empty?');
 			$('#sparql').html('empty?');
 		}
-	
+	else {
+		//translate to sparql
+		s3ql2sparql.toSparql(quickTranslator.fullQuery.finale, 'sparql', quickTranslator.core);
+	}
 	
 }
  </script>
@@ -25,8 +28,8 @@ function instantTranslate() {
   <table border=0>
   <tr>
 	<td><textarea id="input" style="background-color: black; color: white; size: 30;-moz-border-radius: 15px;border-radius: 15px" name="" rows="5" cols="30" onKeyUp="instantTranslate()"></textarea></td>
-	<td><textarea id="s3ql" style="background-color: black; color: white; size: 30;-moz-border-radius: 15px;border-radius: 15px" name="" rows="5" cols="50" ></textarea></td>
-	<td><textarea id="sparql" style="background-color: black; color: white; size: 30;-moz-border-radius: 15px;border-radius: 15px" name="" rows="5" cols="50" disabled></textarea></td>
+	<td><textarea id="s3ql" style="background-color: black; color: white; size: 30;-moz-border-radius: 15px;border-radius: 15px;" name="" rows="5" cols="50" ></textarea></td>
+	<td><img src="s3qlw.png" style="margin-left: -10; margin-top: 10" width="300" height="150" border="0"></td>
   </tr>
   <tr>
 	
@@ -35,8 +38,10 @@ function instantTranslate() {
 	<img src="hp.png" style="margin-left: 80" width="120" height="120" border="1">
 	<div style="height:70;width: 220;color: #FF6A22; font-weight: bold; font-family:Comic Sans MS;font-size:16; text-align: center;text-shadow: #000000 1px 1px 1px;background-color: #66CCFF;-moz-border-radius: 15px;border-radius: 15px">Try typing something like select, insert, select(S), select(S|R123,value=test)</div>
 	</td>
-	<td></td>
-	<td></td>
+	<td>
+	<textarea id="sparql" style="background-color: black; color: white; size: 30;-moz-border-radius: 15px;border-radius: 15px" name="" rows="15" cols="50" disabled></textarea>
+	</td>
+	<td><img src="sparqlw.png" style="margin-left: -10" width="400" height="150" border="0"></td>
   </tr>
   <tr>
 	<td></td>

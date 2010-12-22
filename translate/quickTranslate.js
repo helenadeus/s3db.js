@@ -40,15 +40,18 @@ quickTranslator = {
 			
 			}
 		};
-		core = s3db;
+		quickTranslator.core = s3db;
+	}
+	else {
+		quickTranslator.core = core;
 	}
 	//clean queryPars
 	quickTranslator.queryParts = {action:'', target:'',params:{}};
 	
 	//start of by reading all that is before the first |
 	//var entityNames = {"S":"statement", "R": "rule","C":"collection","I":"item","P":"project","U":"user","D":"deployment"};
-	if(typeof(core.entities)!=='undefined' && typeof(core.entities)=='object'){
-		var entityNames = core.entities;
+	if(typeof(quickTranslator.core.entities)!=='undefined' && typeof(quickTranslator.core.entities)=='object'){
+		var entityNames = quickTranslator.core.entities;
 	}
 	else {
 		var entityNames = [];
@@ -57,13 +60,13 @@ quickTranslator = {
 	var s3ql_query = "";
 	
 	var symbols = '';var ind=0; 
-	$.each(core.entitySymbols, function(index, value) { 
+	$.each(quickTranslator.core.entitySymbols, function(index, value) { 
 		//if(ind!==0) symbols += '|'; 
 		symbols += index; ind++;
 	} );
 	//Detect any operation specification; separate components so that each can be trimmed
 	var actions = ''; 
-	$.each(core.actions, function(index, value) {  
+	$.each(quickTranslator.core.actions, function(index, value) {  
 		if(index!==0)  actions += '|'; actions += value; 
 	});
 	var op = query.trim().match(actions);
@@ -82,7 +85,7 @@ quickTranslator = {
 		var symb = target[1].trim().match('^(['+symbols+'])');
 		if(symb){
 			symb = symb[1];
-			var entity = core.entitySymbols[symb];
+			var entity = quickTranslator.core.entitySymbols[symb];
 			quickTranslator.queryParts.target = entity;		
 			quickTranslator.quickUpdate(el);
 		}
@@ -124,7 +127,7 @@ quickTranslator = {
 				var attr = attrValue[1].trim();
 				var value = attrValue[2].trim();
 				if(attr && value){
-					if(core.entitySymbols[attr]) {attr =core.entity_ids[attr];}
+					if(quickTranslator.core.entitySymbols[attr]) {attr =quickTranslator.core.entity_ids[attr];}
 					
 				}
 				
@@ -132,14 +135,14 @@ quickTranslator = {
 			 else if (pi.match('['+symbols+'](.*)')) {
 					
 					letterSymbol = pi.match('('+symbols+')([0-9]+| (.+))');
-					if(typeof(core.name)!=='undefined' && core.name=='s3db'){
+					if(typeof(quickTranslator.core.name)!=='undefined' && quickTranslator.core.name=='s3db'){
 						var uid_info = uid_resolve(pi);
 					}
 					else {
 						uid_info = {'letter' : letterSymbol[1], 's3_id': letterSymbol[2] }
 					}
 					
-					attr = core.entity_ids[uid_info['letter']];
+					attr = quickTranslator.core.entity_ids[uid_info['letter']];
 					value = uid_info['s3_id'];
 					
 			}
@@ -200,6 +203,7 @@ quickTranslator = {
 			quickTranslator.fullQuery.paramString = paramStr;
 		}
 		var s3qlstr = '<S3QL>'+actionString+paramStr+'</S3QL>';
+		quickTranslator.fullQuery.finale = s3qlstr;
 		$('#'+el).html(s3qlstr);
 	}
 	
@@ -256,5 +260,225 @@ function uid_resolve(uid){
 		 
 		 
 	return uid_info;
+}
+
+
+s3ql2sparql = {
+	s3qlObj : {},
+	getCore : function (core) {
+		if(typeof(core)=='undefined'){
+			//alert('You need to define a variable named "core" as the name for your included core structure');
+			var s3db = {
+				name : 's3db',
+				entities : ["deployment", "user", "project", "collection", "rule","item","statement"],
+				entity_ids : {D:'deployment_id',U:'user_id',P:'project_id',C:'collection_id',R:'rule_id',I:'item_id',S:'statement_id'},
+					
+				relationships : {
+					DP : {domain : 'deployment', range : 'project' },
+					PC : {domain : 'project', range : 'collection' },
+					PR : {domain : 'project', range : 'rule' },
+					CI : {domain : 'collection', range : 'item' },
+					Rsubject : {domain : 'collection', range : 'rule' },
+					Robject : {domain : 'collection', range : 'rule' },
+					Rpredicate : {domain : 'item', range : 'rule' },
+					Ssubject : {domain : 'item', range : 'statement' },
+					Sobject : {domain : 'item', range : 'statement' },
+					Spredicate : {domain : 'rule', range : 'statement' },
+					DU : {domain : 'deployment', range : 'user' },
+					DU : {domain : 'user', range : 'user' }		
+				},
+
+				
+				actions : ["select", "insert", "update", "delete" ],
+				entitySymbols : { D :"deployment",  U :"user",  P:"project", C:"collection",R:"rule", I:"item", S:"statement"},
+				globalAttributes : ["id", "label", "description", "created", "creator"],
+				
+				specificAttributes: {
+					deployment: [],
+					user : ['username','email'],
+					project: [],
+					collection: ["project_id"],
+					rule: ["project_id", "subject_id", "verb_id", "object_id"],
+					item: ["collection_id"],
+					statement : ["item_id", "rule_id", "value"]
+				
+				}
+			};
+			
+			s3ql2sparql.core = s3db;
+			
+		}
+		else {
+			s3ql2sparql.core = core;
+		}
+
+	},
+	parse : function(q) {
+		//read the query from xml format
+			s3ql2sparql.s3qlObj = {action:'', params: {}, target: {}};
+			if($(q).find('select').length>0)
+				{ 
+				s3ql2sparql.s3qlObj.action = 'select'; 
+				s3ql2sparql.s3qlObj.template = $(q).find('select').text();
+				if($(q).find('from')){
+					s3ql2sparql.s3qlObj.target = $(q).find('from').text();
+				}
+			}
+			else if ($(q).find('update').length>0) {
+				 s3ql2sparql.s3qlObj.action = 'update'; 
+				 s3ql2sparql.s3qlObj.target = $(q).find('update').text();
+			}
+			else if ($(q).find('insert').length>0) {
+				 s3ql2sparql.s3qlObj.action = 'insert'; 
+				 s3ql2sparql.s3qlObj.target = $(q).find('insert').text();
+			}
+			else if ($(q).find('delete').length>0) {
+				 s3ql2sparql.s3qlObj.action = 'delete'; 
+				 s3ql2sparql.s3qlObj.target = $(q).find('delete').text();
+			}
+			$(q).find('where').each( 
+				function () {
+					
+					$(this).children().each(
+						function () {
+							var attr = $(this)[0].nodeName.toLowerCase();
+							var val = $(this).text();
+							s3ql2sparql.s3qlObj.params[attr] = val;
+						}
+					);
+				});
+
+			
+		
+	},
+	toSparql : function (query, el,core) {
+		if(typeof(el)==='undefined') var el = 's';
+		if($('#'+el).length==0) { $(document.createElement('div')).attr('id','s').appendTo('body');}
+			
+		//parse the xml in the query
+		s3ql2sparql.getCore(core);
+		s3ql2sparql.parse(query);
+		
+		
+		//first part of sparql will be the prefiex; i'd like to paint them in a lighter color, indicating they are not very imp
+		s3ql2sparql.sparql = '';
+		//var prefixes = 
+		//	'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\nPREFIX s3db: <http://www.s3db.org/core#>\nPREFIX : < type here the URL of your S3DB deployment>';
+		var prefixes = 	'PREFIX : <type here the URL of S3DB>';
+		
+		s3ql2sparql.defaultns = ':';
+		s3ql2sparql.s3dbns = 's3db:';
+		s3ql2sparql.rdfns = 'rdf:';
+		s3ql2sparql.rdfsns = 'rdfs:';
+
+		//can we detect a subject?
+		//for item or collection, the subject will be the itme or collection; for statmetns and rules, because they are triples, it will be items and collections... does this make any sense? well... for now I will make it only for rules and statements; will thnkik about C and I later
+		if(s3ql2sparql.s3qlObj.action==='select' && s3ql2sparql.s3qlObj.target!==""){
+			switch (s3ql2sparql.s3qlObj.target) {
+			case 'rule':
+
+							
+				s3ql2sparql.subject = s3ql2sparql.guessValue('C', 'subject_id');
+				s3ql2sparql.predicate = s3ql2sparql.guessValue('I', 'verb_id');
+				//now the object is tricky; it can either work with another item, or with a value; 
+				if(typeof(s3ql2sparql.s3qlObj.params['object_id'])!=='undefined')
+				{	s3ql2sparql.object = s3ql2sparql.guessValue('C', 'object_id');}
+				else {
+					s3ql2sparql.object = s3ql2sparql.guessValue('C', 'object');
+				}
+				
+				break;
+			case 'statement':
+				
+				//do we know the uid of subject type?
+				s3ql2sparql.subjectEntitySymb = 'I';
+				s3ql2sparql.subjectEntityID = 'item_id';
+				
+				s3ql2sparql.subject = s3ql2sparql.guessValueFromCore('I');
+				s3ql2sparql.predicate = s3ql2sparql.guessValueFromCore('R');
+				//now the object is tricky; it can either work with another item, or with a value; 
+				s3ql2sparql.object = s3ql2sparql.guessValue('I', 'value');
+							
+				break;
+			}
+			
+				
+			s3ql2sparql.terse = s3ql2sparql.subject+'\t'+s3ql2sparql.predicate+'\t'+s3ql2sparql.object+'\t.';
+		}
+		else if(s3ql2sparql.s3qlObj.target!=="") {
+			//non convertible
+			s3ql2sparql.terse =  '';
+		}
+		else {
+			$('#'+el).html("");
+			return false;
+		}
+		
+		s3ql2sparql.sparql = prefixes+'\n\n';
+		s3ql2sparql.sparql += 'SELECT * WHERE {\n';
+		s3ql2sparql.sparql += s3ql2sparql.terse;
+		s3ql2sparql.sparql += '\n}';
+		$('#'+el).html(s3ql2sparql.sparql);
+		return (s3ql2sparql.sparql);
+		
+		
+	},
+
+	guessValue : function (altCoreSymb, param) {
+		if(typeof(s3ql2sparql.s3qlObj.params[param])=='undefined'){
+			 var guessSyntax = '?'+param;
+		}
+		else {
+			if(!isNaN(parseFloat(s3ql2sparql.s3qlObj.params[param])) && typeof(altCoreSymb)!=='undefined') //true if numeric
+				{
+					var guessSyntax = s3ql2sparql.guessValueFromCore(altCoreSymb, param);
+				}
+			else {
+				var guessSyntax = '"'+s3ql2sparql.s3qlObj.params[param]+'"';
+			}
+		}
+		return guessSyntax;
+
+	},
+	guessValueFromCore : function(symb, par) {
+		
+		var entity = s3ql2sparql.core.entitySymbols[symb];	
+		var id = s3ql2sparql.core.entity_ids[symb];
+		
+		//to support alternatives
+		if(typeof(par)!=='undefined') id = par;
+
+		if(typeof(s3ql2sparql.s3qlObj.params[id])=='undefined'){
+			
+			//i will figure out later if I want to fetch the rule to make to informed guesses about the variable names; for now, I'll jus use ?item
+			 var guessSyntax = '?'+id;
+		}
+		else {
+			
+		
+			//great, what would it be defined as?
+			//check if numeric
+			if(!isNaN(parseFloat(s3ql2sparql.s3qlObj.params[id]))) 
+				var varVal = symb+s3ql2sparql.s3qlObj.params[id];
+			else {
+				var varVal = s3ql2sparql.s3qlObj.params[id];
+			}
+			//var itemInfo = uid_resolve(item);			
+		
+			if(s3ql2sparql.s3qlObj.params[id].match('^'+symb)){
+				var fixedSubj = s3ql2sparql.defaultns+s3ql2sparql.s3qlObj.params[id];
+			}
+			else if (s3ql2sparql.s3qlObj.params[id].match('^http')) {
+				var fixedSubj = '<'+s3ql2sparql.s3qlObj.params[id]+'>';
+			}
+			else {
+				var fixedSubj = s3ql2sparql.defaultns+symb+s3ql2sparql.s3qlObj.params[id];
+			}
+			var guessSyntax = fixedSubj;
+		}			
+	return guessSyntax;
+	}
+
+
 }
 
